@@ -8,9 +8,8 @@
 | المسار | الوصف |
 |---|---|
 | `index.html` | تطبيق الواجهة كاملاً (SPA) |
-| `api/otp/*` | التحقق بخطوتين عبر البريد (Resend) |
 | `api/onedrive/*` | ربط OneDrive وقراءة ملفات Excel (Microsoft Graph) |
-| `api/_lib/*` | تشفير الكوكيز AES-256-GCM، البريد، Graph |
+| `api/_lib/*` | تشفير الكوكيز AES-256-GCM، Graph |
 | `vercel.json` | المسارات وترويسات الأمان |
 | `firestore.rules` | قواعد Firestore (الأدوار وصلاحيات التعديل) |
 
@@ -18,10 +17,7 @@
 
 | المتغير | مطلوب | الوصف |
 |---|:---:|---|
-| `COOKIE_SECRET` | ✅ | نص عشوائي 32 حرفاً أو أكثر (`openssl rand -base64 32`) |
-| `RESEND_API_KEY` | — | مفتاح Resend لإرسال رموز OTP (مطلوب فقط إذا فُعّل `OTP_ENABLED` في `index.html`) |
-| `OTP_FROM_EMAIL` | — | المرسل، مثل `Analysis <no-reply@tact.sa>` (يتطلب توثيق الدومين في Resend) |
-| `OTP_ALLOWED_DOMAINS` | — | النطاقات المسموح لها بالدخول، الافتراضي `tact.sa` (افصل بفاصلة) |
+| `COOKIE_SECRET` | OneDrive | نص عشوائي 32 حرفاً أو أكثر (`openssl rand -base64 32`) |
 | `MS_CLIENT_ID` | OneDrive | Azure App Registration |
 | `MS_CLIENT_SECRET` | OneDrive | Azure client secret |
 | `MS_TENANT_ID` | OneDrive | معرف المستأجر في Azure |
