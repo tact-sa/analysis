@@ -19,7 +19,7 @@
 | المتغير | مطلوب | الوصف |
 |---|:---:|---|
 | `COOKIE_SECRET` | ✅ | نص عشوائي 32 حرفاً أو أكثر (`openssl rand -base64 32`) |
-| `RESEND_API_KEY` | ✅ | مفتاح Resend لإرسال رموز OTP |
+| `RESEND_API_KEY` | — | مفتاح Resend لإرسال رموز OTP (مطلوب فقط إذا فُعّل `OTP_ENABLED` في `index.html`) |
 | `OTP_FROM_EMAIL` | — | المرسل، مثل `Analysis <no-reply@tact.sa>` (يتطلب توثيق الدومين في Resend) |
 | `OTP_ALLOWED_DOMAINS` | — | النطاقات المسموح لها بالدخول، الافتراضي `tact.sa` (افصل بفاصلة) |
 | `MS_CLIENT_ID` | OneDrive | Azure App Registration |

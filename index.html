@@ -3515,6 +3515,8 @@ document.getElementById("unlock").addEventListener("click", tryLogin);
 });
 
 // ————— OTP Two-Factor Authentication —————
+// تفعيل/تعطيل التحقق بخطوتين (OTP عبر البريد). غيّرها إلى true لإعادة التفعيل.
+const OTP_ENABLED = false;
 const OTP_VERIFIED_KEY = "ar_otp_verified";
 let _otpEmail = null;
 let _otpTimerId = null;
@@ -3599,6 +3601,11 @@ async function verifyOTP(email, code) {
 }
 
 async function gateOnOTP(email) {
+  // التحقق بخطوتين معطّل — ادخل مباشرة بعد تسجيل الدخول
+  if (!OTP_ENABLED) {
+    unlock(email);
+    return;
+  }
   // إذا كان المستخدم متحقق OTP في هذه الجلسة — افتح مباشرة
   try {
     if (sessionStorage.getItem(OTP_VERIFIED_KEY) === email) {
