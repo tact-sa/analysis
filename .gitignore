@@ -1,20 +1,5 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
-venv/
-.pytest_cache/
-
-# Jupyter
-.ipynb_checkpoints/
-
-# Data
-data/raw/*
-data/processed/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-
-# Env / OS
+node_modules/
+.vercel/
 .env
+.env.*
 .DS_Store
