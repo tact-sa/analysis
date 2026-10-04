@@ -2375,7 +2375,7 @@
 
       <div class="editor-section">
         <h3 data-i18n="current_accounts">الحسابات الحالية</h3>
-        <div style="font-size:11px; color:var(--ink-muted); line-height:1.6; margin-bottom:8px;" data-i18n="reports_perm_hint">اختر التقارير التي يظهرها كل مستخدم. السوبر يوزر يشاهد الكل تلقائياً.</div>
+        <div style="font-size:11px; color:var(--ink-muted); line-height:1.6; margin-bottom:8px;"><span data-i18n="reports_perm_hint">اختر التقارير التي يظهرها كل مستخدم. السوبر يوزر يشاهد الكل تلقائياً.</span> <span data-i18n="edit_perm_hint">للمحرر: اختر الجداول التي يقدر يعدّلها.</span></div>
         <div id="users-list" style="display:flex; flex-direction:column; gap:10px;"></div>
       </div>
     </div>
@@ -2740,6 +2740,12 @@ const TR = {
     current_accounts: "الحسابات الحالية",
     reports_perm: "التقارير المرئية",
     reports_perm_hint: "اختر التقارير التي يظهرها كل مستخدم. السوبر يوزر يشاهد الكل تلقائياً.",
+    edit_perm: "صلاحيات التعديل",
+    edit_perm_hint: "للمحرر: اختر الجداول التي يقدر يعدّلها.",
+    edit_invoices: "الفواتير",
+    edit_projects: "المشاريع",
+    edit_campaigns: "الحملات",
+    edit_no_perm: "لا تملك صلاحية تعديل هذه البيانات",
     perm_no_access: "لا تملك صلاحية الوصول لهذا التقرير",
     perm_no_reports: "لم تُمنح صلاحية أي تقرير — تواصل مع المسؤول",
     disp_proj_kpis: "مؤشرات المشاريع (KPIs)",
@@ -2989,6 +2995,12 @@ const TR = {
     current_accounts: "Current accounts",
     reports_perm: "Visible reports",
     reports_perm_hint: "Choose which reports each user can see. Super users see all automatically.",
+    edit_perm: "Edit access",
+    edit_perm_hint: "For editors: choose which tables they can edit.",
+    edit_invoices: "Invoices",
+    edit_projects: "Projects",
+    edit_campaigns: "Campaigns",
+    edit_no_perm: "You don't have permission to edit this data",
     perm_no_access: "You don't have access to this report",
     perm_no_reports: "No report permissions granted — contact the administrator",
     disp_proj_kpis: "Projects KPIs",
@@ -3155,6 +3167,28 @@ function computePerms(user) {
     projects: r.projects !== false,
     campaigns: r.campaigns !== false
   };
+}
+// ————— Edit permissions (المحرر فقط) —————
+// كل محرر له edit:{invoices,projects,campaigns}. السوبر يعدّل الكل، والمشاهد لا يعدّل شيئاً.
+const DEFAULT_EDITS = { invoices: true, projects: true, campaigns: true };
+function computeEditPerms(user) {
+  if (!user) return { invoices: false, projects: false, campaigns: false };
+  if (user.role === "super") return { invoices: true, projects: true, campaigns: true };
+  if (user.role !== "editor") return { invoices: false, projects: false, campaigns: false };
+  const e = user.edit || {};
+  return {
+    invoices:  e.invoices  !== false,   // default true
+    projects:  e.projects  !== false,
+    campaigns: e.campaigns !== false
+  };
+}
+function myEditPerms() {
+  const me = currentUser();
+  return computeEditPerms(me && USERS[me]);
+}
+function canEditAny(user) {
+  const e = computeEditPerms(user);
+  return e.invoices || e.projects || e.campaigns;
 }
 function firstAllowedPage(perms) {
   if (perms.debt)      return "debt";
@@ -3330,7 +3364,8 @@ function unlock(email) {
   const roleBadge = document.getElementById("user-role");
   const isSuper  = user.role === "super";
   const isEditor = user.role === "editor";
-  const canEdit  = isSuper || isEditor;
+  // المحرر بدون أي صلاحية تعديل يُعامل كمشاهد في الواجهة
+  const canEdit  = isSuper || (isEditor && canEditAny(user));
   if (isSuper) {
     roleBadge.textContent = t("super_user");
     roleBadge.style.background = "var(--accent-soft)";
@@ -3849,6 +3884,8 @@ function recomputeFromInvoices() {
 }
 
 function saveData() {
+  // كل صف يُحفظ بمعرّف ثابت — يمنع تغيّر جداول لم يعدّلها المستخدم (قواعد Firestore تقارن الحقول)
+  ensureRowUids();
   try { localStorage.setItem(DATA_KEY, JSON.stringify(DATA)); } catch(e) {}
   if (USE_FIREBASE && fbDB) {
     return fbDB.collection("dashboard").doc("main").set(DATA)
@@ -3949,12 +3986,29 @@ function subscribeCloudData() {
     if (Object.keys(map).length) {
       USERS = map;
       try { localStorage.setItem(USERS_KEY, JSON.stringify(USERS)); } catch(e) {}
+      // لو تغيّرت صلاحيات تعديل المستخدم الحالي، حدّث جداول البيانات فوراً
+      const dsT = document.getElementById("tab-data-settings");
+      if (dsT && dsT.style.display !== "none" && typeof renderDataGrids === "function") renderDataGrids();
+      if (typeof renderHome === "function") renderHome();
       if (typeof renderUsersList === "function" &&
           document.getElementById("settings").getAttribute("aria-hidden") === "false") {
         renderUsersList();
       }
     }
   }, err => console.error("users snapshot err:", err));
+
+  // غير السوبر لا يقرأ مجموعة users كاملة — راقب ملفه الشخصي فقط لتحديث صلاحياته فوراً
+  const meEmail = currentUser();
+  if (meEmail) {
+    fbDB.collection("users").doc(meEmail).onSnapshot(doc => {
+      if (!doc.exists) return;
+      USERS[meEmail] = { ...doc.data(), hash: "" };
+      _currentPerms = computePerms(USERS[meEmail]);
+      const dsT = document.getElementById("tab-data-settings");
+      if (dsT && dsT.style.display !== "none") renderDataGrids();
+      renderHome();
+    }, err => console.error("profile snapshot err:", err));
+  }
 }
 
 /* =================================================
@@ -4125,8 +4179,7 @@ function renderHome() {
   // Data card visible only for super/editor
   const me = currentUser();
   const meUser = me && USERS[me];
-  const r = meUser && meUser.role;
-  const canEdit = r === "super" || r === "editor";
+  const canEdit = canEditAny(meUser);
   if (el("home-card-data")) el("home-card-data").style.display = canEdit ? "" : "none";
   // Hide report cards for users without permission
   const p = computePerms(meUser);
@@ -4533,7 +4586,29 @@ const PRJ_FIELDS = [
   { key: "status",    label: "status",    type: "text",   width: 140 }
 ];
 
+// إخفاء الجداول/الأزرار التي لا يملك المستخدم صلاحية تعديلها
+function applyEditPerms() {
+  const e = myEditPerms();
+  const me = currentUser();
+  const isSuper = !!(me && USERS[me] && USERS[me].role === "super");
+  const showCard = (tableId, on) => {
+    const t = document.getElementById(tableId);
+    const card = t && t.closest("section");
+    if (card) card.style.display = on ? "" : "none";
+  };
+  showCard("grid-invoices",  e.invoices);
+  showCard("grid-projects",  e.projects);
+  showCard("grid-campaigns", e.campaigns);
+  // محرر المؤشرات + Excel يعدّلان الفواتير
+  const drawerBtn = document.getElementById("open-editor-drawer");
+  if (drawerBtn) drawerBtn.style.display = e.invoices ? "" : "none";
+  // استيراد البيانات الافتراضية يستبدل كل شيء — للسوبر فقط
+  const seedBtn = document.getElementById("seed-default-btn");
+  if (seedBtn) seedBtn.style.display = isSuper ? "" : "none";
+}
+
 function renderDataGrids() {
+  applyEditPerms();
   renderGrid("invoices", "grid-invoices", INV_FIELDS, DATA.invoices, "grid-inv-subtitle", () => {
     recomputeFromInvoices();
     renderKPIs(); renderAging(); renderDSO(); renderDebtors(); renderInvoices();
@@ -4549,6 +4624,7 @@ function renderDataGrids() {
 function renderGrid(kind, tableId, fields, rows, subtitleId, onChange) {
   const table = document.getElementById(tableId);
   if (!table) return;
+  if (!myEditPerms()[kind]) { table.querySelector("thead tr").innerHTML = ""; table.querySelector("tbody").innerHTML = ""; return; }
   const thead = table.querySelector("thead tr");
   const tbody = table.querySelector("tbody");
   thead.innerHTML = "";
@@ -4617,6 +4693,7 @@ function renderGrid(kind, tableId, fields, rows, subtitleId, onChange) {
       : (targetRow.id || `#${i+1}`);
     del.addEventListener("click", async (e) => {
       e.stopPropagation();
+      if (!myEditPerms()[kind]) return;
       if (!confirm(`${t("delete_row")}: ${label}`)) return;
 
       const live = findLive(kind, targetRow);
@@ -4669,6 +4746,7 @@ function markSaved(kind) {
 }
 
 document.getElementById("add-invoice").addEventListener("click", async () => {
+  if (!myEditPerms().invoices) return;
   DATA.invoices.push({
     _uid: makeUid(),
     clientNo: "", client: "", amount: 0, dueDays: 0, dueLine: "0 - 30",
@@ -4683,6 +4761,7 @@ document.getElementById("add-invoice").addEventListener("click", async () => {
   if (!res || res.ok !== false) markSaved("invoices");
 });
 document.getElementById("add-project").addEventListener("click", async () => {
+  if (!myEditPerms().projects) return;
   const nextId = "PRJ-" + String((DATA.projects.length + 1)).padStart(3, "0");
   DATA.projects.push({
     _uid: makeUid(),
@@ -4698,6 +4777,7 @@ document.getElementById("add-project").addEventListener("click", async () => {
 {
   const addCmp = document.getElementById("add-campaign");
   if (addCmp) addCmp.addEventListener("click", async () => {
+    if (!myEditPerms().campaigns) return;
     if (!Array.isArray(DATA.campaigns)) DATA.campaigns = [];
     const nextId = "CMP-" + String((DATA.campaigns.length + 1)).padStart(3, "0");
     DATA.campaigns.push({
@@ -5125,6 +5205,7 @@ const editor = document.getElementById("editor");
 const backdrop = document.getElementById("editor-backdrop");
 
 function openEditor() {
+  if (!myEditPerms().invoices) return;
   fillEditor();
   editor.classList.add("open");
   backdrop.classList.add("open");
@@ -5232,6 +5313,7 @@ document.getElementById("cancel-edit").addEventListener("click", () => {
 backdrop.addEventListener("click", closeEditor);
 
 document.getElementById("save-data").addEventListener("click", () => {
+  if (!myEditPerms().invoices) { closeEditor(); return; }
   collectEditor();
   saveData();
   renderAll();
@@ -5239,6 +5321,9 @@ document.getElementById("save-data").addEventListener("click", () => {
 });
 
 document.getElementById("reset-data").addEventListener("click", () => {
+  // يمسح كل البيانات — للسوبر فقط
+  const me = currentUser();
+  if (!(me && USERS[me] && USERS[me].role === "super")) { alert(t("edit_no_perm")); return; }
   if (confirm("استعادة البيانات الافتراضية؟ سيتم فقدان التغييرات المحفوظة.")) {
     DATA = JSON.parse(JSON.stringify(DEFAULT_DATA));
     saveData();
@@ -5400,6 +5485,22 @@ function renderUsersList() {
         <span>${escapeHtml(label)}</span>
       </label>`;
     };
+    // صلاحيات التعديل — تظهر لصفوف المحررين فقط
+    const edits = { ...DEFAULT_EDITS, ...(u.edit || {}) };
+    const editChip = (key, label) => {
+      const on = edits[key] !== false;
+      return `<label class="perm-chip ${on ? "on" : "off"}" title="${escapeHtml(label)}">
+        <input type="checkbox" data-email="${escapeHtml(email)}" data-edit="${key}" ${on ? "checked" : ""} style="display:none;">
+        <span>✎ ${escapeHtml(label)}</span>
+      </label>`;
+    };
+    const editRow = u.role === "editor" ? `
+      <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; align-items:center;">
+        <span style="font-size:11px; color:var(--ink-subtle); text-transform:uppercase; letter-spacing:0.06em; margin-inline-end:4px;">${escapeHtml(t("edit_perm"))}:</span>
+        ${editChip("invoices",  t("edit_invoices"))}
+        ${editChip("projects",  t("edit_projects"))}
+        ${editChip("campaigns", t("edit_campaigns"))}
+      </div>` : "";
     div.innerHTML = `
       <div style="display:flex; align-items:center; gap:12px;">
         <div style="width:36px; height:36px; border-radius:50%; background:${avatarBg}; color:${avatarFg}; display:grid; place-items:center; font-weight:700; flex-shrink:0;">${avatarChar}</div>
@@ -5420,6 +5521,7 @@ function renderUsersList() {
         ${permChip("projects",  "📁 " + t("tab_projects"))}
         ${permChip("campaigns", "📣 " + t("tab_campaigns"))}
       </div>
+      ${editRow}
     `;
     div.style.cssText = "padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; display:block;";
     wrap.appendChild(div);
@@ -5460,6 +5562,19 @@ function renderUsersList() {
       }
     });
   });
+  // تفعيل/إلغاء صلاحيات التعديل للمحرر
+  wrap.querySelectorAll("[data-edit]").forEach(cb => {
+    cb.addEventListener("change", async () => {
+      const email = cb.dataset.email;
+      const key = cb.dataset.edit;
+      if (!USERS[email].edit) USERS[email].edit = { ...DEFAULT_EDITS };
+      USERS[email].edit[key] = cb.checked;
+      const chip = cb.closest(".perm-chip");
+      if (chip) { chip.classList.toggle("on", cb.checked); chip.classList.toggle("off", !cb.checked); }
+      saveUsers();
+      if (USE_FIREBASE) await saveUserToCloud(email, USERS[email]);
+    });
+  });
   wrap.querySelectorAll("[data-action='delete']").forEach(btn => {
     btn.addEventListener("click", async () => {
       if (btn.disabled) return;
@@ -5493,7 +5608,7 @@ async function addUser() {
   if (!strong) { msg.textContent = "الرمز يجب أن يحوي حرف صغير وحرف كبير ورقم على الأقل"; return; }
   if (USERS[email]) { msg.textContent = "هذا البريد مسجل مسبقاً"; return; }
 
-  const profile = { role, name: name || email.split("@")[0], reports: { ...DEFAULT_REPORTS } };
+  const profile = { role, name: name || email.split("@")[0], reports: { ...DEFAULT_REPORTS }, edit: { ...DEFAULT_EDITS } };
 
   if (USE_FIREBASE && fbSecondaryApp) {
     // إنشاء حساب حقيقي في Firebase Auth باستخدام النسخة الثانوية حتى لا نغير الجلسة الحالية
@@ -5851,6 +5966,10 @@ function showExcelMsg(text, kind) {
 }
 
 async function importExcelFile(file) {
+  if (!myEditPerms().invoices) {
+    showExcelMsg(t("edit_no_perm"), "err");
+    return;
+  }
   if (typeof XLSX === "undefined") {
     showExcelMsg("مكتبة Excel لم تُحمّل", "err");
     return;
@@ -5920,7 +6039,8 @@ async function importExcelFile(file) {
     // Optional: projects sheet
     let projCount = 0;
     const projSheet = findSheet(wb, ["projects", "المشاريع", "Projects"]);
-    if (projSheet) {
+    // المشاريع تُستورد فقط لمن يملك صلاحية تعديلها
+    if (projSheet && myEditPerms().projects) {
       const prows = XLSX.utils.sheet_to_json(projSheet, { defval: null });
       const projs = [];
       prows.forEach(r => {

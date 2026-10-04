@@ -12,6 +12,7 @@
 | `api/onedrive/*` | ربط OneDrive وقراءة ملفات Excel (Microsoft Graph) |
 | `api/_lib/*` | تشفير الكوكيز AES-256-GCM، البريد، Graph |
 | `vercel.json` | المسارات وترويسات الأمان |
+| `firestore.rules` | قواعد Firestore (الأدوار وصلاحيات التعديل) |
 
 ## متغيرات البيئة (Vercel → Settings → Environment Variables)
 
@@ -32,3 +33,24 @@
 npm install
 npx vercel dev
 ```
+
+## الصلاحيات
+
+| الدور | التقارير | التعديل |
+|---|---|---|
+| سوبر يوزر | الكل | كل شيء + الحسابات والإعدادات |
+| محرر | حسب `reports` | الجداول المحددة في `edit` فقط |
+| مشاهد | حسب `reports` | لا شيء |
+
+وثيقة المستخدم في `users/{email}`:
+
+```js
+{
+  role: "editor",
+  reports: { debt: true, projects: true, campaigns: false },
+  edit:    { invoices: true, projects: false, campaigns: false } // للمحرر فقط
+}
+```
+
+تُدار من الإعدادات ← إدارة الحسابات. لتطبيقها من جهة السيرفر انشر `firestore.rules`
+من Firebase Console ← Firestore Database ← Rules.

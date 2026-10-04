@@ -1,0 +1,51 @@
+rules_version = '2';
+// قواعد Firestore — تطبّق الأدوار وصلاحيات التعديل من جهة السيرفر.
+// انشرها من: Firebase Console → Firestore Database → Rules  (أو: firebase deploy --only firestore:rules)
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+    function me() {
+      return get(/databases/$(db)/documents/users/$(myEmail())).data;
+    }
+    function hasProfile() {
+      return signedIn() && exists(/databases/$(db)/documents/users/$(myEmail()));
+    }
+    function isSuper()  { return hasProfile() && me().role == "super"; }
+    function isEditor() { return hasProfile() && me().role == "editor"; }
+    // صلاحية تعديل جدول معيّن للمحرر (الافتراضي: مسموح إذا لم يُحدَّد)
+    function canEdit(table) {
+      return me().get("edit", {}).get(table, true) == true;
+    }
+    // المحرر يعدّل فقط الحقول المسموح له بها
+    function editorUpdateAllowed() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return (!changed.hasAny(["invoices", "badDebtPct", "provision", "dsoTarget"]) || canEdit("invoices"))
+          && (!changed.hasAny(["projects"])  || canEdit("projects"))
+          && (!changed.hasAny(["campaigns"]) || canEdit("campaigns"))
+          && !changed.hasAny(["_seededAt", "_seededBy"]);
+    }
+
+    match /users/{email} {
+      allow read: if signedIn() && (myEmail() == email || isSuper());
+      allow write: if isSuper();
+    }
+
+    match /dashboard/{doc} {
+      allow read: if signedIn();
+      allow create, delete: if isSuper();
+      // kpi / aging / debtors مشتقة من الفواتير وتُعاد حسابها عند كل حفظ
+      allow update: if isSuper() || (isEditor() && editorUpdateAllowed());
+    }
+
+    match /meta/{doc} {
+      allow read: if signedIn();
+      allow write: if isSuper();
+    }
+  }
+}
