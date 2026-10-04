@@ -54,3 +54,10 @@ npx vercel dev
 
 تُدار من الإعدادات ← إدارة الحسابات. لتطبيقها من جهة السيرفر انشر `firestore.rules`
 من Firebase Console ← Firestore Database ← Rules.
+
+## النشر
+
+الموقع `analysis.tact.sa` منشور على Vercel من المستودع `tact-sa/analysis`:
+
+- أي رفع على فرع `main` ← نشر تلقائي للإنتاج.
+- الفروع الأخرى ← نسخ معاينة (Preview) فقط.
