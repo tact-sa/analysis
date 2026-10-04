@@ -4,7 +4,7 @@
   "private": true,
   "description": "analysis.tact.sa — Financial analysis dashboard (static SPA + Vercel serverless functions)",
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "vercel dev",
