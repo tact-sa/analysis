@@ -900,14 +900,18 @@
   /* Projects specific */
   .kpi-grid-5 {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 16px;
   }
-  @media (max-width: 1100px) {
-    .kpi-grid-5 { grid-template-columns: repeat(3, 1fr); }
+  .kpi-grid-5 .kpi { padding: 18px 16px; min-width: 0; }
+  .kpi-grid-5 .kpi-value { font-size: clamp(18px, 1.7vw, 26px); white-space: nowrap; }
+  @media (max-width: 1280px) {
+    .kpi-grid-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .kpi-grid-5 .kpi-value { font-size: 24px; }
   }
   @media (max-width: 720px) {
-    .kpi-grid-5 { grid-template-columns: repeat(2, 1fr); }
+    .kpi-grid-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .kpi-grid-5 .kpi-value { font-size: 20px; }
   }
   .project-progress {
     height: 6px;
@@ -2166,6 +2170,11 @@
         <div class="kpi-value"><span id="pk-invoiced">0</span><span class="currency" data-i18n="currency">ر.س</span></div>
         <div class="kpi-sub" id="pk-invoiced-sub">—</div>
       </div>
+      <div class="kpi clickable" onclick="openProjectsBy('remaining')">
+        <div class="kpi-label" data-i18n="proj_kpi_remaining">متبقي العقد</div>
+        <div class="kpi-value"><span id="pk-remaining">0</span><span class="currency" data-i18n="currency">ر.س</span></div>
+        <div class="kpi-sub" id="pk-remaining-sub">—</div>
+      </div>
       <div class="kpi alert clickable" onclick="openProjectsBy('outstanding')">
         <div class="kpi-label" data-i18n="proj_kpi_outstanding">المستحق</div>
         <div class="kpi-value"><span id="pk-outstanding">0</span><span class="currency" data-i18n="currency">ر.س</span></div>
@@ -2197,6 +2206,7 @@
               <th data-i18n="col_pm">PM</th>
               <th class="num" data-i18n="col_contract">إجمالي العقد</th>
               <th class="num" data-i18n="col_completed">المنجز</th>
+              <th class="num" data-i18n="col_remaining">متبقي العقد</th>
               <th class="num" data-i18n="col_invoiced">المفوتر</th>
               <th class="num" data-i18n="col_outstanding">المستحق</th>
               <th class="num" data-i18n="col_advance">المقدم</th>
@@ -2238,6 +2248,11 @@
         <div class="kpi-value"><span id="ck-invoiced">0</span><span class="currency" data-i18n="currency">ر.س</span></div>
         <div class="kpi-sub" id="ck-invoiced-sub">—</div>
       </div>
+      <div class="kpi clickable" onclick="openCampaignsBy('remaining')">
+        <div class="kpi-label" data-i18n="proj_kpi_remaining">متبقي العقد</div>
+        <div class="kpi-value"><span id="ck-remaining">0</span><span class="currency" data-i18n="currency">ر.س</span></div>
+        <div class="kpi-sub" id="ck-remaining-sub">—</div>
+      </div>
       <div class="kpi alert clickable" onclick="openCampaignsBy('outstanding')">
         <div class="kpi-label" data-i18n="proj_kpi_outstanding">المستحق</div>
         <div class="kpi-value"><span id="ck-outstanding">0</span><span class="currency" data-i18n="currency">ر.س</span></div>
@@ -2269,6 +2284,7 @@
               <th data-i18n="col_pm">PM</th>
               <th class="num" data-i18n="col_contract">إجمالي العقد</th>
               <th class="num" data-i18n="col_completed">المنجز</th>
+              <th class="num" data-i18n="col_remaining">متبقي العقد</th>
               <th class="num" data-i18n="col_invoiced">المفوتر</th>
               <th class="num" data-i18n="col_outstanding">المستحق</th>
               <th class="num" data-i18n="col_advance">المقدم</th>
@@ -2683,6 +2699,7 @@ const TR = {
     of: "من", invoice_word: "فاتورة", invoices_word: "فواتير", total: "إجمالي",
     proj_kpi_contracts: "إجمالي العقود", proj_kpi_completed: "المنجز",
     proj_kpi_invoiced: "المفوتر", proj_kpi_outstanding: "المستحق", proj_kpi_advance: "المقدم",
+    proj_kpi_remaining: "متبقي العقد", col_remaining: "متبقي العقد", detail_remaining: "متبقي العقد (لم يُنجز)",
     proj_title: "قائمة المشاريع", proj_all: "جميع المشاريع",
     proj_search: "بحث عن مشروع أو عميل...",
     col_project_name: "المشروع", col_contract: "إجمالي العقد",
@@ -2939,6 +2956,7 @@ const TR = {
     of: "of", invoice_word: "invoice", invoices_word: "invoices", total: "Total",
     proj_kpi_contracts: "Total Contracts", proj_kpi_completed: "Completed",
     proj_kpi_invoiced: "Invoiced", proj_kpi_outstanding: "Outstanding", proj_kpi_advance: "Advance",
+    proj_kpi_remaining: "Contract Remaining", col_remaining: "Remaining", detail_remaining: "Contract Remaining (not completed)",
     proj_title: "Projects List", proj_all: "All Projects",
     proj_search: "Search project or client...",
     col_project_name: "Project", col_contract: "Contract Total",
@@ -4285,6 +4303,15 @@ window.addEventListener("popstate", () => {
   switchPage(pathToPage(window.location.pathname), { skipPush: true });
 });
 
+// متبقي العقد = إجمالي العقد − المنجز (قيمة العمل الذي لم يُنجز بعد)
+function contractRemaining(p) {
+  return Math.max(0, (+p.contract || 0) - (+p.completed || 0));
+}
+// المستحق = إجمالي العقد − المفوتر
+function contractOutstanding(p) {
+  return Math.max(0, (+p.contract || 0) - (+p.invoiced || 0));
+}
+
 function renderProjects() {
   const projs = DATA.projects || [];
   const sumContract    = projs.reduce((s, p) => s + (+p.contract || 0), 0);
@@ -4292,11 +4319,13 @@ function renderProjects() {
   const sumInvoiced    = projs.reduce((s, p) => s + (+p.invoiced || 0), 0);
   const sumAdvance     = projs.reduce((s, p) => s + (+p.advance || 0), 0);
   const sumOutstanding = projs.reduce((s, p) => s + Math.max(0, (+p.contract || 0) - (+p.invoiced || 0)), 0);
+  const sumRemaining   = projs.reduce((s, p) => s + contractRemaining(p), 0);
 
   const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   setTxt("pk-contracts",    fmt(sumContract));
   setTxt("pk-completed",    fmt(sumCompleted));
   setTxt("pk-invoiced",     fmt(sumInvoiced));
+  setTxt("pk-remaining",    fmt(sumRemaining));
   setTxt("pk-outstanding",  fmt(sumOutstanding));
   setTxt("pk-advance",      fmt(sumAdvance));
 
@@ -4305,6 +4334,7 @@ function renderProjects() {
   setTxt("pk-contracts-sub",   `${projs.length} ${projWord}`);
   setTxt("pk-completed-sub",   `${pct(sumCompleted, sumContract)}% ${t("of_total")}`);
   setTxt("pk-invoiced-sub",    `${pct(sumInvoiced, sumContract)}% ${t("of_total")}`);
+  setTxt("pk-remaining-sub",   `${pct(sumRemaining, sumContract)}% ${t("of_total")}`);
   setTxt("pk-outstanding-sub", `${pct(sumOutstanding, sumContract)}% ${t("of_total")}`);
   setTxt("pk-advance-sub",     `${pct(sumAdvance, sumContract)}% ${t("of_total")}`);
 
@@ -4319,7 +4349,7 @@ function renderProjects() {
 
   tbody.innerHTML = "";
   if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--ink-subtle); font-size:13px;">${escapeHtml(t("empty_state_sub"))}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:var(--ink-subtle); font-size:13px;">${escapeHtml(t("empty_state_sub"))}</td></tr>`;
     document.getElementById("projects-subtitle").textContent = t("empty_state_title");
     return;
   }
@@ -4350,6 +4380,7 @@ function renderProjects() {
       <td style="font-size:12px;">${escapeHtml(p.pm || "—")}</td>
       <td class="num">${fmt(contract)}</td>
       <td class="num">${fmt(completed)}</td>
+      <td class="num">${fmt(contractRemaining(p))}</td>
       <td class="num">${fmt(invoiced)}</td>
       <td class="num" style="color:${outstanding > 0 ? "var(--warning)" : "var(--ink-muted)"}">${fmt(outstanding)}</td>
       <td class="num">${fmt(advance)}</td>
@@ -4396,6 +4427,7 @@ function showProjectDetail(p) {
       <div class="fld"><div class="lbl">${t("detail_advance_received")}</div><div class="val num">${fmt(advance)}</div></div>
       <div class="fld"><div class="lbl">${t("detail_contract_total")}</div><div class="val num">${fmt(contract)}</div></div>
       <div class="fld"><div class="lbl">${t("detail_completed")}</div><div class="val num">${fmt(completed)}</div></div>
+      <div class="fld"><div class="lbl">${t("detail_remaining")}</div><div class="val num">${fmt(contractRemaining(p))}</div></div>
       <div class="fld"><div class="lbl">${t("detail_invoiced")}</div><div class="val num">${fmt(invoiced)}</div></div>
       <div class="fld"><div class="lbl">${t("detail_outstanding_not_invoiced")}</div><div class="val num">${fmt(outstanding)}</div></div>
     </div>
@@ -4437,20 +4469,19 @@ function openProjectsAll() {
 }
 function openProjectsBy(field) {
   const projs = (DATA.projects || []).slice().sort((a, b) => {
-    if (field === "outstanding") {
-      return (Math.max(0, (+b.contract||0) - (+b.invoiced||0))) - (Math.max(0, (+a.contract||0) - (+a.invoiced||0)));
-    }
+    if (field === "outstanding") return contractOutstanding(b) - contractOutstanding(a);
+    if (field === "remaining")   return contractRemaining(b) - contractRemaining(a);
     return (+b[field] || 0) - (+a[field] || 0);
   });
   const labels = LANG === "en"
-    ? { completed:"by Completed", invoiced:"by Invoiced", outstanding:"by Outstanding", advance:"by Advance" }
-    : { completed:"حسب المنجز", invoiced:"حسب المفوتر", outstanding:"حسب المستحق", advance:"حسب المقدم" };
+    ? { completed:"by Completed", remaining:"by Contract Remaining", invoiced:"by Invoiced", outstanding:"by Outstanding", advance:"by Advance" }
+    : { completed:"حسب المنجز", remaining:"حسب متبقي العقد", invoiced:"حسب المفوتر", outstanding:"حسب المستحق", advance:"حسب المقدم" };
   document.getElementById("details-title").textContent = t("tab_projects") + " " + (labels[field] || "");
   document.getElementById("details-subtitle").textContent = `${projs.length} ${projs.length === 1 ? t("project_word") : t("projects_word")}`;
   const body = document.getElementById("details-body");
   body.innerHTML = `<div class="table-wrap"><table><thead><tr>
     <th>${t("col_project_name")}</th><th>${t("col_client")}</th>
-    <th class="num">${t("total")}</th><th class="num">${t("col_completed")}</th><th class="num">${t("col_invoiced")}</th><th class="num">${t("col_outstanding")}</th><th class="num">${t("col_advance")}</th>
+    <th class="num">${t("total")}</th><th class="num">${t("col_completed")}</th><th class="num">${t("col_remaining")}</th><th class="num">${t("col_invoiced")}</th><th class="num">${t("col_outstanding")}</th><th class="num">${t("col_advance")}</th>
   </tr></thead><tbody>${projs.map(p => {
     const outstanding = Math.max(0, (+p.contract||0) - (+p.invoiced||0));
     return `<tr class="clickable-row" data-proj="${escapeHtml(p.id || "")}">
@@ -4458,6 +4489,7 @@ function openProjectsBy(field) {
       <td style="font-size:12px;">${escapeHtml(p.client || "—")}</td>
       <td class="num">${fmt(p.contract)}</td>
       <td class="num">${fmt(p.completed)}</td>
+      <td class="num">${fmt(contractRemaining(p))}</td>
       <td class="num">${fmt(p.invoiced)}</td>
       <td class="num">${fmt(outstanding)}</td>
       <td class="num">${fmt(p.advance)}</td>
@@ -4481,11 +4513,13 @@ function renderCampaigns() {
   const sumInvoiced    = cmps.reduce((s, p) => s + (+p.invoiced || 0), 0);
   const sumAdvance     = cmps.reduce((s, p) => s + (+p.advance || 0), 0);
   const sumOutstanding = cmps.reduce((s, p) => s + Math.max(0, (+p.contract || 0) - (+p.invoiced || 0)), 0);
+  const sumRemaining   = cmps.reduce((s, p) => s + contractRemaining(p), 0);
 
   const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   setTxt("ck-contracts",    fmt(sumContract));
   setTxt("ck-completed",    fmt(sumCompleted));
   setTxt("ck-invoiced",     fmt(sumInvoiced));
+  setTxt("ck-remaining",    fmt(sumRemaining));
   setTxt("ck-outstanding",  fmt(sumOutstanding));
   setTxt("ck-advance",      fmt(sumAdvance));
 
@@ -4494,6 +4528,7 @@ function renderCampaigns() {
   setTxt("ck-contracts-sub",   `${cmps.length} ${cWord}`);
   setTxt("ck-completed-sub",   `${pct(sumCompleted, sumContract)}% ${t("of_total")}`);
   setTxt("ck-invoiced-sub",    `${pct(sumInvoiced, sumContract)}% ${t("of_total")}`);
+  setTxt("ck-remaining-sub",   `${pct(sumRemaining, sumContract)}% ${t("of_total")}`);
   setTxt("ck-outstanding-sub", `${pct(sumOutstanding, sumContract)}% ${t("of_total")}`);
   setTxt("ck-advance-sub",     `${pct(sumAdvance, sumContract)}% ${t("of_total")}`);
 
@@ -4507,7 +4542,7 @@ function renderCampaigns() {
 
   tbody.innerHTML = "";
   if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--ink-subtle); font-size:13px;">${escapeHtml(t("empty_state_sub"))}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:var(--ink-subtle); font-size:13px;">${escapeHtml(t("empty_state_sub"))}</td></tr>`;
     document.getElementById("campaigns-subtitle").textContent = t("empty_state_title");
     return;
   }
@@ -4537,6 +4572,7 @@ function renderCampaigns() {
       <td style="font-size:12px;">${escapeHtml(p.pm || "—")}</td>
       <td class="num">${fmt(contract)}</td>
       <td class="num">${fmt(completed)}</td>
+      <td class="num">${fmt(contractRemaining(p))}</td>
       <td class="num">${fmt(invoiced)}</td>
       <td class="num" style="color:${outstanding > 0 ? "var(--warning)" : "var(--ink-muted)"}">${fmt(outstanding)}</td>
       <td class="num">${fmt(advance)}</td>
@@ -4575,6 +4611,7 @@ function showCampaignDetail(p) {
       <div class="fld"><div class="lbl">${t("detail_advance_received")}</div><div class="val num">${fmt(advance)}</div></div>
       <div class="fld"><div class="lbl">${t("detail_contract_total")}</div><div class="val num">${fmt(contract)}</div></div>
       <div class="fld"><div class="lbl">${t("detail_completed")}</div><div class="val num">${fmt(completed)}</div></div>
+      <div class="fld"><div class="lbl">${t("detail_remaining")}</div><div class="val num">${fmt(contractRemaining(p))}</div></div>
       <div class="fld"><div class="lbl">${t("detail_invoiced")}</div><div class="val num">${fmt(invoiced)}</div></div>
       <div class="fld"><div class="lbl">${t("detail_outstanding")}</div><div class="val num">${fmt(outstanding)}</div></div>
     </div>
@@ -4591,20 +4628,19 @@ function openCampaignsAll() {
 }
 function openCampaignsBy(field) {
   const cmps = (DATA.campaigns || []).slice().sort((a, b) => {
-    if (field === "outstanding") {
-      return (Math.max(0, (+b.contract||0) - (+b.invoiced||0))) - (Math.max(0, (+a.contract||0) - (+a.invoiced||0)));
-    }
+    if (field === "outstanding") return contractOutstanding(b) - contractOutstanding(a);
+    if (field === "remaining")   return contractRemaining(b) - contractRemaining(a);
     return (+b[field] || 0) - (+a[field] || 0);
   });
   const labels = LANG === "en"
-    ? { completed:"by Completed", invoiced:"by Invoiced", outstanding:"by Outstanding", advance:"by Advance" }
-    : { completed:"حسب المنجز", invoiced:"حسب المفوتر", outstanding:"حسب المستحق", advance:"حسب المقدم" };
+    ? { completed:"by Completed", remaining:"by Contract Remaining", invoiced:"by Invoiced", outstanding:"by Outstanding", advance:"by Advance" }
+    : { completed:"حسب المنجز", remaining:"حسب متبقي العقد", invoiced:"حسب المفوتر", outstanding:"حسب المستحق", advance:"حسب المقدم" };
   document.getElementById("details-title").textContent = t("tab_campaigns") + " " + (labels[field] || "");
   document.getElementById("details-subtitle").textContent = `${cmps.length} ${cmps.length === 1 ? t("campaign_word") : t("campaigns_word")}`;
   const body = document.getElementById("details-body");
   body.innerHTML = `<div class="table-wrap"><table><thead><tr>
     <th>${t("tab_campaigns")}</th><th>${t("col_client")}</th>
-    <th class="num">${t("total")}</th><th class="num">${t("col_completed")}</th><th class="num">${t("col_invoiced")}</th><th class="num">${t("col_outstanding")}</th><th class="num">${t("col_advance")}</th>
+    <th class="num">${t("total")}</th><th class="num">${t("col_completed")}</th><th class="num">${t("col_remaining")}</th><th class="num">${t("col_invoiced")}</th><th class="num">${t("col_outstanding")}</th><th class="num">${t("col_advance")}</th>
   </tr></thead><tbody>${cmps.map(p => {
     const outstanding = Math.max(0, (+p.contract||0) - (+p.invoiced||0));
     return `<tr class="clickable-row" data-cmp="${escapeHtml(p.id || "")}">
@@ -4612,6 +4648,7 @@ function openCampaignsBy(field) {
       <td style="font-size:12px;">${escapeHtml(p.client || "—")}</td>
       <td class="num">${fmt(p.contract)}</td>
       <td class="num">${fmt(p.completed)}</td>
+      <td class="num">${fmt(contractRemaining(p))}</td>
       <td class="num">${fmt(p.invoiced)}</td>
       <td class="num">${fmt(outstanding)}</td>
       <td class="num">${fmt(p.advance)}</td>
@@ -6681,7 +6718,7 @@ function renderProjectsChart() {
       labels,
       datasets: [
         { label: t("col_completed"),   data: completed, backgroundColor: tok.positive, borderRadius: 4, stack: "x" },
-        { label: t("col_outstanding"), data: remaining, backgroundColor: tok.warning,  borderRadius: 4, stack: "x" }
+        { label: t("col_remaining"),   data: remaining, backgroundColor: tok.warning,  borderRadius: 4, stack: "x" }
       ]
     },
     options: {
@@ -6710,7 +6747,7 @@ function renderCampaignsChart() {
       labels,
       datasets: [
         { label: t("col_completed"),   data: completed, backgroundColor: tok.positive, borderRadius: 4, stack: "x" },
-        { label: t("col_outstanding"), data: remaining, backgroundColor: tok.warning,  borderRadius: 4, stack: "x" }
+        { label: t("col_remaining"),   data: remaining, backgroundColor: tok.warning,  borderRadius: 4, stack: "x" }
       ]
     },
     options: {
@@ -6901,8 +6938,8 @@ function attachSort(tableSelector, columns, dataGetter, rerenderer) {
       const data = dataGetter();
       const isNum = col.type === "num";
       data.sort((a, b) => {
-        const av = a[col.key];
-        const bv = b[col.key];
+        const av = col.get ? col.get(a) : a[col.key];
+        const bv = col.get ? col.get(b) : b[col.key];
         const va = isNum ? (+av || 0) : String(av || "").toLowerCase();
         const vb = isNum ? (+bv || 0) : String(bv || "").toLowerCase();
         if (va < vb) return state === "asc" ? -1 : 1;
@@ -6948,8 +6985,9 @@ function initSorts() {
       { key: "pm" },
       { key: "contract", type: "num" },
       { key: "completed", type: "num" },
+      { key: "remaining", type: "num", get: contractRemaining },
       { key: "invoiced", type: "num" },
-      { key: "outstanding", type: "num" },
+      { key: "outstanding", type: "num", get: contractOutstanding },
       { key: "advance", type: "num" }
     ],
     () => DATA.projects,
@@ -6963,8 +7001,9 @@ function initSorts() {
       { key: "pm" },
       { key: "contract", type: "num" },
       { key: "completed", type: "num" },
+      { key: "remaining", type: "num", get: contractRemaining },
       { key: "invoiced", type: "num" },
-      { key: "outstanding", type: "num" },
+      { key: "outstanding", type: "num", get: contractOutstanding },
       { key: "advance", type: "num" }
     ],
     () => DATA.campaigns,
