@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vercel dev",
-    "check": "node --check api/_lib/crypto.js && node --check api/_lib/msgraph.js && node --check api/onedrive/auth.js && node --check api/onedrive/callback.js && node --check api/onedrive/status.js && node --check api/onedrive/disconnect.js && node --check api/onedrive/data.js"
+    "check": "node --check api/_lib/crypto.js && node --check api/_lib/mail.js && node --check api/_lib/msgraph.js && node --check api/otp/send.js && node --check api/otp/verify.js && node --check api/onedrive/auth.js && node --check api/onedrive/callback.js && node --check api/onedrive/status.js && node --check api/onedrive/disconnect.js && node --check api/onedrive/data.js"
   },
   "dependencies": {
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"

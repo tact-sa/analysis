@@ -438,6 +438,60 @@
   body.locked { overflow: hidden; }
   body.locked .app { visibility: hidden; }
 
+  /* OTP screen */
+  #otp {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: none;
+    place-items: center;
+    z-index: 9998;
+    padding: 20px;
+  }
+  #otp.open { display: grid; }
+  #otp .lock-card { width: min(420px, 92vw); }
+  #otp .otp-logo { align-self: center; }
+  #otp-input {
+    padding: 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: 0.5em;
+    direction: ltr;
+    outline: none;
+    transition: border-color .15s;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  #otp-input:focus { border-color: var(--accent); }
+  #otp-input.err {
+    border-color: var(--negative);
+    animation: shake .3s;
+  }
+  .otp-info {
+    font-size: 12px;
+    color: var(--ink-muted);
+    text-align: center;
+    line-height: 1.7;
+  }
+  .otp-info b { color: var(--ink); font-family: var(--font-mono); direction: ltr; display: inline-block; }
+  .otp-actions {
+    display: flex; gap: 10px; align-items: center; justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+  }
+  .otp-timer {
+    font-size: 11px;
+    color: var(--ink-subtle);
+    font-family: var(--font-mono);
+    direction: ltr;
+  }
+
   /* Language toggle — same visual family as theme toggle */
   .lang-toggle {
     display: inline-flex;
@@ -1578,6 +1632,31 @@
     </div>
 
     <div id="mode-indicator" style="font-size:11px; text-align:center; color:var(--ink-subtle); padding-top:8px; border-top:1px solid var(--border);"></div>
+  </div>
+</div>
+
+<!-- ============ OTP SCREEN ============ -->
+<div id="otp">
+  <div class="lock-card">
+    <svg class="lock-logo otp-logo" role="img" aria-label="tact Digital comm."><use href="#tact-logo"/></svg>
+    <div class="lock-title" data-i18n="otp_title" style="text-align:center;">التحقق بخطوتين</div>
+    <div class="otp-info" data-i18n="otp_hint">أرسلنا رمز تحقق من ٦ خانات إلى بريدك. الرمز صالح لمدة ١٠ دقائق.</div>
+    <div class="otp-info">
+      <span data-i18n="email">البريد الإلكتروني</span>: <b id="otp-email">—</b>
+    </div>
+    <div class="field">
+      <label for="otp-input" data-i18n="otp_label">رمز التحقق</label>
+      <input id="otp-input" type="text" inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" placeholder="••••••">
+    </div>
+    <button id="otp-verify-btn" class="btn"><span data-i18n="otp_verify">تحقّق</span></button>
+    <div class="lock-err" id="otp-err"></div>
+    <div class="otp-actions">
+      <button type="button" class="link-btn" id="otp-resend-btn" data-i18n="otp_resend">إعادة الإرسال</button>
+      <span class="otp-timer" id="otp-timer">10:00</span>
+    </div>
+    <div class="otp-actions" style="border-top:0; padding-top:0; margin-top:0;">
+      <button type="button" class="link-btn" id="otp-logout-btn" style="color:var(--ink-muted); font-size:12px;" data-i18n="otp_change_account">تسجيل الخروج</button>
+    </div>
   </div>
 </div>
 
@@ -2763,6 +2842,20 @@ const TR = {
     export_pdf: "تصدير PDF",
     export_pdf_progress: "جارٍ توليد PDF...",
     export_pdf_done: "تم التصدير ✓",
+    otp_title: "التحقق بخطوتين",
+    otp_hint: "أرسلنا رمز تحقق من ٦ خانات إلى بريدك. الرمز صالح لمدة ١٠ دقائق.",
+    otp_label: "رمز التحقق",
+    otp_verify: "تحقّق",
+    otp_resend: "إعادة الإرسال",
+    otp_sending: "جارٍ الإرسال...",
+    otp_sent: "تم إرسال الرمز إلى بريدك ✓",
+    otp_verifying: "جارٍ التحقق...",
+    otp_success: "تم التحقق ✓",
+    otp_invalid: "الرمز غير صحيح",
+    otp_expired: "انتهت صلاحية الرمز",
+    otp_send_fail: "فشل الإرسال — تأكد من إعدادات الخدمة",
+    otp_wait: "يرجى الانتظار قبل إعادة الإرسال",
+    otp_change_account: "تسجيل الخروج",
     home_go: "دخول",
     home_debt_desc: "تحليل الذمم المدينة على العملاء — أعمار الديون وحالة التحصيل",
     home_projects_desc: "تحليل حالة المشاريع — العقود، المنجز، المفوتر، المستحق، والمقدم",
@@ -3004,6 +3097,20 @@ const TR = {
     export_pdf: "Export PDF",
     export_pdf_progress: "Generating PDF...",
     export_pdf_done: "Exported ✓",
+    otp_title: "Two-step verification",
+    otp_hint: "We sent a 6-digit code to your email. Valid for 10 minutes.",
+    otp_label: "Verification code",
+    otp_verify: "Verify",
+    otp_resend: "Resend",
+    otp_sending: "Sending...",
+    otp_sent: "Code sent ✓",
+    otp_verifying: "Verifying...",
+    otp_success: "Verified ✓",
+    otp_invalid: "Invalid code",
+    otp_expired: "Code expired",
+    otp_send_fail: "Send failed — check service configuration",
+    otp_wait: "Please wait before resending",
+    otp_change_account: "Sign out",
     home_go: "Open",
     home_debt_desc: "Accounts receivable analysis — debt aging and collection status",
     home_projects_desc: "Project analysis — contracts, completed, invoiced, outstanding, and advance",
@@ -3301,6 +3408,7 @@ function resetIdleTimer() {
     try {
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(SESSION_ID_KEY);
+      sessionStorage.removeItem(OTP_VERIFIED_KEY);
     } catch(e) {}
     if (USE_FIREBASE && fbAuth) {
       try { await fbAuth.signOut(); } catch(e) {}
@@ -3452,11 +3560,11 @@ if (USE_FIREBASE) {
         const doc = await fbDB.collection("users").doc(email).get();
         const profile = doc.exists ? doc.data() : { role: "viewer", name: email.split("@")[0] };
         USERS[email] = { ...profile, hash: "" };
-        unlock(email);
+        gateOnOTP(email);
       } catch (e) {
         console.error("profile load failed:", e);
         USERS[email] = { role: "viewer", name: email.split("@")[0], hash: "" };
-        unlock(email);
+        gateOnOTP(email);
       }
     } else {
       // signed out — show lock if not already shown
@@ -3479,6 +3587,159 @@ document.getElementById("unlock").addEventListener("click", tryLogin);
   document.getElementById(id).addEventListener("keydown", e => {
     if (e.key === "Enter") tryLogin();
   });
+});
+
+// ————— OTP Two-Factor Authentication —————
+// تفعيل/تعطيل التحقق بخطوتين (OTP عبر البريد). غيّرها إلى true لإعادة التفعيل.
+const OTP_ENABLED = true;
+const OTP_VERIFIED_KEY = "ar_otp_verified";
+let _otpEmail = null;
+let _otpTimerId = null;
+let _otpExpiresAt = 0;
+let _otpResendCooldown = 0;
+
+function showOTPError(msg) {
+  const err = document.getElementById("otp-err");
+  const input = document.getElementById("otp-input");
+  err.textContent = msg || "";
+  if (msg) {
+    input.classList.add("err");
+    setTimeout(() => input.classList.remove("err"), 350);
+  }
+}
+
+function startOTPTimer(seconds) {
+  _otpExpiresAt = Date.now() + seconds * 1000;
+  clearInterval(_otpTimerId);
+  const tick = () => {
+    const remaining = Math.max(0, Math.floor((_otpExpiresAt - Date.now()) / 1000));
+    const m = String(Math.floor(remaining / 60)).padStart(2, "0");
+    const s = String(remaining % 60).padStart(2, "0");
+    document.getElementById("otp-timer").textContent = `${m}:${s}`;
+    if (remaining <= 0) {
+      clearInterval(_otpTimerId);
+      showOTPError(t("otp_expired") || "انتهت صلاحية الرمز — أعد الإرسال");
+    }
+  };
+  tick();
+  _otpTimerId = setInterval(tick, 1000);
+}
+
+function updateResendButton() {
+  const btn = document.getElementById("otp-resend-btn");
+  if (!btn) return;
+  const remaining = Math.max(0, Math.ceil((_otpResendCooldown - Date.now()) / 1000));
+  if (remaining > 0) {
+    btn.disabled = true;
+    btn.textContent = `${t("otp_resend") || "إعادة الإرسال"} (${remaining})`;
+    setTimeout(updateResendButton, 500);
+  } else {
+    btn.disabled = false;
+    btn.textContent = t("otp_resend") || "إعادة الإرسال";
+  }
+}
+
+async function requestOTP(email) {
+  try {
+    const res = await fetch("/api/otp/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "فشل إرسال الرمز");
+    startOTPTimer(data.expiresIn || 600);
+    _otpResendCooldown = Date.now() + 30 * 1000; // 30s cooldown between resends
+    updateResendButton();
+    showOTPError("");
+    return true;
+  } catch (e) {
+    showOTPError(e.message || "فشل إرسال الرمز");
+    return false;
+  }
+}
+
+async function verifyOTP(email, code) {
+  try {
+    const res = await fetch("/api/otp/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "الرمز غير صحيح");
+    return true;
+  } catch (e) {
+    showOTPError(e.message || "الرمز غير صحيح");
+    return false;
+  }
+}
+
+async function gateOnOTP(email) {
+  // التحقق بخطوتين معطّل — ادخل مباشرة بعد تسجيل الدخول
+  if (!OTP_ENABLED) {
+    unlock(email);
+    return;
+  }
+  // إذا كان المستخدم متحقق OTP في هذه الجلسة — افتح مباشرة
+  try {
+    if (sessionStorage.getItem(OTP_VERIFIED_KEY) === email) {
+      unlock(email);
+      return;
+    }
+  } catch(e) {}
+
+  _otpEmail = email;
+  // إخفاء شاشة القفل وعرض شاشة OTP
+  const lock = document.getElementById("lock");
+  if (lock) lock.style.display = "none";
+  const otp = document.getElementById("otp");
+  otp.classList.add("open");
+  document.getElementById("otp-email").textContent = email;
+  document.getElementById("otp-input").value = "";
+  document.getElementById("otp-input").focus();
+  showOTPError("");
+
+  // أرسل الرمز أول مرة
+  await requestOTP(email);
+}
+
+document.getElementById("otp-verify-btn").addEventListener("click", async () => {
+  const code = document.getElementById("otp-input").value.trim();
+  if (!/^\d{6}$/.test(code)) { showOTPError(t("otp_bad_format") || "الرمز يجب أن يكون ٦ أرقام"); return; }
+  const btn = document.getElementById("otp-verify-btn");
+  btn.disabled = true;
+  const ok = await verifyOTP(_otpEmail, code);
+  btn.disabled = false;
+  if (ok) {
+    try { sessionStorage.setItem(OTP_VERIFIED_KEY, _otpEmail); } catch(e) {}
+    clearInterval(_otpTimerId);
+    document.getElementById("otp").classList.remove("open");
+    unlock(_otpEmail);
+  }
+});
+
+document.getElementById("otp-input").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("otp-verify-btn").click();
+});
+// اقتصر على الأرقام فقط
+document.getElementById("otp-input").addEventListener("input", e => {
+  e.target.value = e.target.value.replace(/\D/g, "").slice(0, 6);
+});
+
+document.getElementById("otp-resend-btn").addEventListener("click", async () => {
+  if (Date.now() < _otpResendCooldown) return;
+  if (!_otpEmail) return;
+  await requestOTP(_otpEmail);
+});
+
+document.getElementById("otp-logout-btn").addEventListener("click", async () => {
+  try { sessionStorage.removeItem(OTP_VERIFIED_KEY); } catch(e) {}
+  clearInterval(_otpTimerId);
+  if (USE_FIREBASE && fbAuth) {
+    try { await fbAuth.signOut(); } catch(e) {}
+  }
+  location.reload();
 });
 
 // —— Forgot password ——
