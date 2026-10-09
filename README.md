@@ -7,7 +7,10 @@
 
 | المسار | الوصف |
 |---|---|
-| `index.html` | تطبيق الواجهة كاملاً (SPA) |
+| `index.html` | هيكل الصفحة (HTML) |
+| `js/app.js` | منطق التطبيق كاملاً (JavaScript) |
+| `js/theme.js`, `js/mode-indicator.js` | تهيئة الثيم ومؤشر الاتصال |
+| `css/app.css` | التنسيقات |
 | `api/otp/*` | التحقق بخطوتين عبر البريد (Resend) |
 | `api/onedrive/*` | ربط OneDrive وقراءة ملفات Excel (Microsoft Graph) |
 | `api/_lib/*` | تشفير الكوكيز AES-256-GCM، البريد (Resend)، Graph |

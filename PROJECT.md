@@ -21,7 +21,7 @@
 ## 🏗 التقنيات
 
 ### الواجهة الأمامية (Frontend)
-- **HTML/CSS/JS خام** — بدون build step، كل شيء في ملف واحد `index.html` (~6000 سطر)
+- **HTML/CSS/JS خام** — بدون build step — `index.html` للهيكل، `js/app.js` للمنطق، `css/app.css` للتنسيق
 - **مكتبات CDN**:
   - Firebase 10.14.1 (Auth + Firestore compat SDK)
   - SheetJS 0.18.5 (قراءة/كتابة Excel)
@@ -63,7 +63,9 @@
 ```
 analysis/
 │
-├── index.html                    ← تطبيق SPA كامل (~6000 سطر)
+├── index.html                    ← هيكل الصفحة
+├── js/app.js                     ← منطق التطبيق
+├── css/app.css                   ← التنسيقات
 ├── vercel.json                   ← إعدادات Vercel + Security Headers
 ├── package.json                  ← اعتماديات Serverless Functions
 ├── .gitignore
@@ -409,7 +411,7 @@ npx vercel dev # يشغّل السيرفر مع API functions
 3. أنشئ **Firestore Database** (production mode)
 4. طبّق Security Rules (انظر أعلاه)
 5. انسخ Config من Project Settings → SDK
-6. الصقه في `index.html` (متغير `firebaseConfig`)
+6. الصقه في `js/app.js` (متغير `firebaseConfig`)
 
 ### إعداد Resend (OTP)
 1. سجّل في [resend.com](https://resend.com/signup) (مجاني — 3000 إيميل/شهر)
@@ -576,7 +578,7 @@ Firestore .set(DATA)
 
 ---
 
-## 🎨 خريطة الوظائف داخل `index.html`
+## 🎨 خريطة الوظائف داخل `js/app.js`
 
 | السطر | القسم |
 |---:|---|
@@ -633,7 +635,7 @@ Serverless stateless — لا ذاكرة مشتركة. Cookie encrypted يعطي
 
 ## 🔮 التحسينات المقترحة
 
-- [ ] فصل JS إلى ملفات منفصلة لتشديد CSP (إزالة `unsafe-inline`)
+- [x] فصل JS إلى ملفات منفصلة لتشديد CSP (إزالة `unsafe-inline`)
 - [ ] إضافة IP-based rate limiting (يتطلب Vercel KV أو Upstash)
 - [ ] Audit log لكل تعديل حساس
 - [ ] Bulk import validation قبل الحفظ
