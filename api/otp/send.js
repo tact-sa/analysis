@@ -59,7 +59,7 @@ module.exports = async (req, res) => {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#FFFFFF;border-radius:14px;overflow:hidden;font-family:'Readex Pro',Tahoma,Arial,sans-serif;color:#282829">
       <tr><td style="background:#282829;padding:22px 28px" dir="ltr">
         <span style="font-size:30px;font-weight:700;color:#F15D2A;letter-spacing:-0.5px">tact</span>
-        <span style="font-size:12px;color:#D9D9D9;letter-spacing:1px;margin-left:6px">FINANCE<span style="color:#F15D2A">.</span></span>
+        <span style="font-size:12px;color:#D9D9D9;letter-spacing:1px;margin-left:6px">FINANCIAL ANALYSIS<span style="color:#F15D2A">.</span></span>
       </td></tr>
       <tr><td style="padding:28px" dir="rtl">
         <p style="margin:0 0 6px;font-size:18px;font-weight:600">رمز التحقق</p>
